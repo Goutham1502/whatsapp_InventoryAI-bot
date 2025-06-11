@@ -3,7 +3,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 import openai
 
 app = Flask(__name__)
-openai.api_key = "sk-your-openai-key"  # Replace this with your real OpenAI API key
+openai.api_key = "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"
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
