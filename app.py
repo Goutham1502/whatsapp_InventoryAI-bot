@@ -5,11 +5,9 @@ import os
 
 app = Flask(__name__)
 import os
-print("🔐 Loaded API Key:", os.getenv("OPENAI_API_KEY"))  # Add this line
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# ✅ Securely get the API key from environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
