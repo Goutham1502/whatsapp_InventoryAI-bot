@@ -17,7 +17,7 @@ def whatsapp_reply():
             raise ValueError("API key not loaded")
 
         gpt_response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an inventory assistant helping small businesses manage stock and delivery."},
                 {"role": "user", "content": incoming_msg}
