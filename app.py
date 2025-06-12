@@ -19,7 +19,9 @@ def whatsapp_reply():
        gpt_response = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
-        {"role": "system", "content": """
+        {
+            "role": "system",
+            "content": """
 You are an AI assistant that manages a store's inventory and deliveries.
 Your job is to:
 - Add stock when the user says things like "Add 10 Soap"
@@ -29,11 +31,16 @@ Your job is to:
 - Keep responses short and professional
 Do NOT respond if the message is unrelated to inventory, delivery, or stock. 
 If you're not sure, reply: 'Sorry, I can only help with inventory or delivery updates.'
-"""},
-        {"role": "user", "content": incoming_msg}
+"""
+        },
+        {
+            "role": "user",
+            "content": incoming_msg
+        }
     ],
     max_tokens=100
 )
+
 
         reply = gpt_response.choices[0].message.content.strip()
     except Exception as e:
