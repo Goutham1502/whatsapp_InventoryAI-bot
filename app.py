@@ -16,9 +16,9 @@ def parse_user_input(user_input):
 You are an AI that extracts multiple inventory instructions from WhatsApp messages.
 
 Return ONLY a valid Python list of dictionaries. Each dictionary should contain:
-- intent: "add_stock", "remove_stock", "check_stock", etc.
-- product: string
-- quantity: integer
+- intent: "add_stock", "remove_stock", "check_stock", "get_full_stock", or "clear_all"
+- product: string (optional for get_full_stock or clear_all)
+- quantity: integer (0 if not mentioned)
 - store_id: integer (default to 1 if not mentioned)
 - expiry_date: string (optional)
 - price: string (optional)
@@ -29,7 +29,7 @@ Message: "{user_input}"
 Example output:
 [
   {{"intent": "add_stock", "product": "milk", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-20", "price": "$3.50", "last_updated": "2025-06-17"}},
-  {{"intent": "add_stock", "product": "bread", "quantity": 15, "store_id": 1, "expiry_date": "2025-07-18", "price": "$2.00", "last_updated": "2025-06-17"}}
+  {{"intent": "get_full_stock", "store_id": 1}}
 ]
 """
     try:
@@ -57,7 +57,7 @@ def whatsapp_reply():
     responses = []
     for parsed in parsed_list:
         intent = parsed.get("intent")
-        product = parsed.get("product")
+        product = parsed.get("product", "")
         quantity = parsed.get("quantity", 0)
         store_id = parsed.get("store_id", 1)
         expiry_date = parsed.get("expiry_date", "")
@@ -79,7 +79,7 @@ def whatsapp_reply():
 
             elif intent == "get_full_stock":
                 report = get_full_stock(store_id)
-                responses.append(report)
+                responses.append("📊 Full Stock Report:\n" + report)
 
             elif intent == "clear_all":
                 cleared = clear_all_products()
