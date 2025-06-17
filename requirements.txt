@@ -1,4 +1,7 @@
 flask
 twilio
 openai==0.28.1
+gspread
+oauth2client
 gunicorn
+
