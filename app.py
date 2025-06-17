@@ -40,6 +40,32 @@ def whatsapp_reply():
 
     parsed = parse_user_input(incoming_msg)
 print("[DEBUG] Parsed GPT Output:", parsed)
+def parse_user_input(user_input):
+    prompt = f"""
+You are an AI that extracts inventory instructions from messages.
+
+Extract this info and return ONLY a valid Python dictionary with:
+- intent: "check_stock" or "add_stock"
+- product: string
+- quantity: integer (0 if not mentioned)
+- store_id: integer (1 if not mentioned)
+
+Message: "{user_input}"
+
+Example output:
+{{"intent": "add_stock", "product": "chips", "quantity": 5, "store_id": 1}}
+"""
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100
+        )
+        return eval(response.choices[0].message.content.strip())
+    except Exception as e:
+        print("[GPT Error]", e)
+        return None
 
     if not parsed:
         msg.body("Sorry, I couldn't understand your request.")
@@ -55,14 +81,16 @@ print("[DEBUG] Parsed GPT Output:", parsed)
             stock = get_stock(product, store_id)
             msg.body(f"{stock} units of {product} in Store {store_id}.")
 
-        elif intent == "add_stock":
-            new_qty = update_stock(product, store_id, quantity)
-            msg.body(f"Added {quantity} {product}(s) to Store {store_id}. New total: {new_qty}.")
-
+       elif intent == "add_stock":
+    if not product:
+        msg.body("❌ I couldn't recognize the product name. Try again.")
+    else:
+        new_qty = update_stock(product, store_id, quantity)
+        if new_qty == "Product not found":
+            msg.body(f"❌ {product} not found in Store {store_id}.")
         else:
-            msg.body("Sorry, I couldn’t process your request.")
-    except Exception as e:
-        msg.body(f"Error: {str(e)}")
+            msg.body(f"✅ Added {quantity} {product}(s) to Store {store_id}. New total: {new_qty}.")
+
 
     return str(resp)
 
