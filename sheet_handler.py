@@ -79,3 +79,12 @@ def get_full_stock(store_id):
         if str(row['Store ID']) == str(store_id):
             summary += f"- {row['Product']}: {row['Quantity']}\n"
     return summary if "-" in summary else "No stock found for this store."
+
+# ⚠️ Utility: Delete all product rows from the sheet (leave header intact)
+def clear_all_products():
+    num_rows = len(sheet.get_all_values())
+    if num_rows > 1:
+        sheet.delete_rows(2, num_rows)
+        return f"🧹 Cleared {num_rows - 1} product rows."
+    else:
+        return "Sheet already empty."
