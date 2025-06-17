@@ -74,6 +74,7 @@ def get_stock(product, store_id):
 # Update stock (e.g. stock in/out)
 def update_stock(product, store_id, change_qty):
     product = str(product).strip()  # ✅ force string and clean spaces
+     print(f"[DEBUG] Searching for product: {product} in store {store_id}") 
     try:
         cell = sheet.find(product)
     except:
