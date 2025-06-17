@@ -73,15 +73,25 @@ def get_stock(product, store_id):
 
 # Update stock (e.g. stock in/out)
 def update_stock(product, store_id, change_qty):
-    product = str(product).strip()  # ✅ force string and clean spaces
-     print(f"[DEBUG] Searching for product: {product} in store {store_id}") 
+    product = str(product).strip()
+    store_id = str(store_id).strip()
+    print(f"[DEBUG] Searching for product: {product} in store {store_id}")
+
     try:
         cell = sheet.find(product)
     except:
-        return "Product not found"
+        cell = None
 
-    row = cell.row
-    current_qty = int(sheet.cell(row, 3).value)
-    new_qty = current_qty + change_qty
-    sheet.update_cell(row, 3, new_qty)
-    return new_qty
+    if cell:
+        row = cell.row
+        current_qty = int(sheet.cell(row, 3).value)
+        new_qty = current_qty + change_qty
+        sheet.update_cell(row, 3, new_qty)
+        return new_qty
+    else:
+        # Product not found, add it as new row
+        new_qty = change_qty
+        new_row = [product, store_id, new_qty, "", "", ""]  # Fill other columns as empty
+        sheet.append_row(new_row)
+        print(f"[DEBUG] Created new row for product: {product}")
+        return new_qty
