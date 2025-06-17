@@ -39,6 +39,7 @@ def whatsapp_reply():
     msg = resp.message()
 
     parsed = parse_user_input(incoming_msg)
+print("[DEBUG] Parsed GPT Output:", parsed)
 
     if not parsed:
         msg.body("Sorry, I couldn't understand your request.")
