@@ -1,6 +1,6 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from sheet_handler import get_stock, update_stock
+from sheet_handler import get_stock, update_stock, remove_stock, get_full_stock
 import openai
 import os
 
@@ -9,28 +9,31 @@ app = Flask(__name__)
 # ✅ Securely load OpenAI key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🧠 Extract intent, product, quantity, and store from user's message
+# 🧠 Extract full inventory fields from user's message
 def parse_user_input(user_input):
     prompt = f"""
 You are an AI that extracts inventory instructions from messages.
 
 Extract this info and return ONLY a valid Python dictionary with:
-- intent: "check_stock" or "add_stock"
-- product: string
+- intent: one of ["check_stock", "add_stock", "remove_stock", "get_full_stock_report"]
+- product: string ("" if not needed)
 - quantity: integer (0 if not mentioned)
 - store_id: integer (1 if not mentioned)
+- expiry_date: string ("YYYY-MM-DD" or "" if not mentioned)
+- price: float (0 if not mentioned)
+- last_updated: today's date in YYYY-MM-DD format
 
 Message: "{user_input}"
 
 Example output:
-{{"intent": "add_stock", "product": "chips", "quantity": 5, "store_id": 1}}
+{{"intent": "add_stock", "product": "chips", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-01", "price": 2.5, "last_updated": "2025-06-16"}}
 """
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100
+            max_tokens=200
         )
         parsed = eval(response.choices[0].message.content.strip())
         print("[DEBUG] Parsed GPT Output:", parsed)
@@ -56,6 +59,9 @@ def whatsapp_reply():
     product = parsed.get("product")
     quantity = parsed.get("quantity", 0)
     store_id = parsed.get("store_id", 1)
+    expiry_date = parsed.get("expiry_date", "")
+    price = parsed.get("price", 0)
+    last_updated = parsed.get("last_updated", "")
 
     try:
         if intent == "check_stock":
@@ -63,16 +69,20 @@ def whatsapp_reply():
             msg.body(f"{stock} units of {product} in Store {store_id}.")
 
         elif intent == "add_stock":
-            if not product:
-                msg.body("❌ I couldn't recognize the product name. Try again.")
-            else:
-                new_qty = update_stock(product, store_id, quantity)
-                if new_qty == "Product not found":
-                    msg.body(f"❌ {product} not found in Store {store_id}.")
-                else:
-                    msg.body(f"✅ Added {quantity} {product}(s) to Store {store_id}. New total: {new_qty}.")
+            new_qty = update_stock(product, store_id, quantity, expiry_date, price, last_updated)
+            msg.body(f"✅ Added {quantity} {product}(s) to Store {store_id}. New total: {new_qty}.")
+
+        elif intent == "remove_stock":
+            result = remove_stock(product, store_id, quantity)
+            msg.body(result)
+
+        elif intent == "get_full_stock_report":
+            summary = get_full_stock(store_id)
+            msg.body(summary)
+
         else:
             msg.body("❌ Intent not recognized.")
+
     except Exception as e:
         msg.body(f"❌ Error: {str(e)}")
 
