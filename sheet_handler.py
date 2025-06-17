@@ -6,7 +6,7 @@ import json
 import os
 
 # ✅ Load base64 credentials from environment (Render)
-b64_creds = os.getenv("GOOGLE_SHEETS_CREDS")  # Make sure this matches your Render environment variable name
+b64_creds = os.getenv("GOOGLE_SHEETS_CREDS_B64")  # Make sure this matches your Render environment variable name
 creds_json = base64.b64decode(b64_creds).decode("utf-8")
 creds_dict = json.loads(creds_json)
 
