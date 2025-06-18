@@ -13,8 +13,8 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # 🧠 NLP-based parsing
-def parse_user_input(user_input):
-    prompt = f"""
+message_input = repr(user_input)
+prompt = f"""
 You are an AI that extracts inventory instructions from WhatsApp messages.
 
 Return ONLY a valid Python list of dictionaries. Each dictionary must include:
@@ -27,15 +27,15 @@ Return ONLY a valid Python list of dictionaries. Each dictionary must include:
 - last_updated: today's date if not mentioned
 - product_quantities: dictionary for combined totals (optional)
 
-Message: {repr(user_input)}
-
+Message: {message_input}
 
 Example:
 [
-  {"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"},
-  {"intent": "calculate_combined_total", "product_quantities": {"milk": 2, "bread": 3}, "store_id": 1}
+  {{"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"}},
+  {{"intent": "calculate_combined_total", "product_quantities": {{"milk": 2, "bread": 3}}, "store_id": 1}}
 ]
 """
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
