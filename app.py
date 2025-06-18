@@ -24,13 +24,10 @@ Return ONLY a valid Python list of dictionaries. Each dictionary should contain:
 - price: string (optional)
 - last_updated: string (default to today if not mentioned)
 
-Message: "{user_input}"
+Example input: "Clear all inventory"
+Example output: [{{"intent": "clear_all"}}]
 
-Example output:
-[
-  {"intent": "add_stock", "product": "milk", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-20", "price": "$3.50", "last_updated": "2025-06-17"},
-  {"intent": "calculate_total_price", "product": "milk", "quantity": 3, "store_id": 1}
-]
+Message: "{user_input}"
 """
     try:
         response = openai.ChatCompletion.create(
@@ -48,6 +45,10 @@ def whatsapp_reply():
     incoming_msg = request.form.get("Body")
     resp = MessagingResponse()
     msg = resp.message()
+
+    if incoming_msg.lower().strip() == "confirm clear all inventory":
+        msg.body(clear_all_products())
+        return str(resp)
 
     parsed_list = parse_user_input(incoming_msg)
     if not parsed_list or not isinstance(parsed_list, list):
@@ -82,8 +83,7 @@ def whatsapp_reply():
                 responses.append("📊 Full Stock Report:\n" + report)
 
             elif intent == "clear_all":
-                cleared = clear_all_products()
-                responses.append(cleared)
+                responses.append("⚠️ Please confirm to clear all inventory by replying with: confirm clear all inventory")
 
             elif intent == "get_price":
                 unit_price = get_price(product, store_id)
