@@ -16,7 +16,6 @@ client = gspread.authorize(creds)
 sheet = client.open("InventoryData").sheet1
 
 # Read stock
-
 def get_stock(product, store_id):
     records = sheet.get_all_records()
     for row in records:
@@ -25,7 +24,6 @@ def get_stock(product, store_id):
     return "Product not found"
 
 # Update stock
-
 def update_stock(product, store_id, change_qty, expiry_date="", price="", last_updated=""):
     product = str(product).strip()
     store_id = str(store_id).strip()
@@ -49,7 +47,6 @@ def update_stock(product, store_id, change_qty, expiry_date="", price="", last_u
         return change_qty
 
 # Remove stock
-
 def remove_stock(product, store_id, quantity):
     product = str(product).strip()
     store_id = str(store_id).strip()
@@ -68,18 +65,16 @@ def remove_stock(product, store_id, quantity):
     return f"❌ {product} not found in Store {store_id}."
 
 # Get full stock
-
 def get_full_stock(store_id):
     records = sheet.get_all_records()
     report = ""
     for row in records:
         if str(row['Store ID']) == str(store_id):
             qty = row['Quantity'] if row['Quantity'] else "NO STOCK"
-            report += f"{row['Product Name']} - {qty}\n"
+            report += f"{row['Product Name']} - {qty} units @ {row['Price']}\n"
     return report.strip()
 
 # Clear all products
-
 def clear_all_products():
     existing = sheet.get_all_values()
     headers = existing[0] if existing else []
@@ -88,7 +83,6 @@ def clear_all_products():
     return "🗑 All products cleared."
 
 # Get unit price
-
 def get_price(product, store_id):
     records = sheet.get_all_records()
     for row in records:
@@ -96,8 +90,7 @@ def get_price(product, store_id):
             return row['Price']
     return "Price not found"
 
-# Calculate total price
-
+# Calculate total price for one product
 def calculate_total_price(product, store_id, quantity):
     records = sheet.get_all_records()
     for row in records:
@@ -108,3 +101,28 @@ def calculate_total_price(product, store_id, quantity):
             except:
                 return "Invalid price format"
     return "Product not found"
+
+# Calculate combined total for multiple products
+def calculate_combined_total(product_quantities, store_id):
+    records = sheet.get_all_records()
+    total = 0
+    missing_items = []
+
+    for product, qty in product_quantities.items():
+        found = False
+        for row in records:
+            if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+                try:
+                    unit_price = float(row['Price'].replace("$", ""))
+                    total += unit_price * qty
+                    found = True
+                    break
+                except:
+                    return f"Invalid price format for {product}"
+        if not found:
+            missing_items.append(product)
+
+    response = f"🧾 Combined total: ${total:.2f}"
+    if missing_items:
+        response += f"\nMissing or not found: {', '.join(missing_items)}"
+    return response
