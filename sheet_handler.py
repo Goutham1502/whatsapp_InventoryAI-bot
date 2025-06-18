@@ -1,90 +1,94 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 import base64
 import json
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# ✅ Load base64 credentials from environment (Render)
-b64_creds = os.getenv("GOOGLE_SHEETS_CREDS_B64")  # Make sure this matches your Render environment variable name
+# Load base64-encoded credentials from environment variable
+b64_creds = os.getenv("GOOGLE_SHEETS_CREDS_B64")
 creds_json = base64.b64decode(b64_creds).decode("utf-8")
 creds_dict = json.loads(creds_json)
 
-# ✅ Setup credentials and sheet connection
+# Authorize with Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("InventoryData").sheet1
 
-# ✅ Get available stock for a product
+# Read stock
 def get_stock(product, store_id):
     records = sheet.get_all_records()
     for row in records:
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
             return row['Quantity']
     return "Product not found"
 
-# ✅ Add or update stock with extra fields
+# Update stock (stock in)
 def update_stock(product, store_id, change_qty, expiry_date, price, last_updated):
     product = str(product).strip()
     store_id = str(store_id).strip()
-    found = False
-    cell = None
+    records = sheet.get_all_records()
 
-    try:
-        cell = sheet.find(product)
-    except:
-        cell = None
+    for idx, row in enumerate(records):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == store_id:
+            row_num = idx + 2
+            new_qty = int(row['Quantity']) + int(change_qty)
+            sheet.update_cell(row_num, 3, new_qty)
+            sheet.update_cell(row_num, 4, expiry_date)
+            sheet.update_cell(row_num, 5, price)
+            sheet.update_cell(row_num, 6, last_updated)
+            return new_qty
 
-    if cell:
-        row = cell.row
-        current_qty = int(sheet.cell(row, 3).value)
-        new_qty = current_qty + change_qty
-        sheet.update_cell(row, 3, new_qty)
-        sheet.update_cell(row, 4, expiry_date)
-        sheet.update_cell(row, 5, price)
-        sheet.update_cell(row, 6, last_updated)
-        return new_qty
-    else:
-        # Append new row if product doesn't exist
-        new_row = [product, store_id, change_qty, expiry_date, price, last_updated]
-        sheet.append_row(new_row)
-        return change_qty
+    # Add new row if not found
+    new_row = [product, store_id, change_qty, expiry_date, price, last_updated]
+    sheet.append_row(new_row)
+    return change_qty
 
-# ✅ Remove stock or delete row if quantity = 0
-def remove_stock(product, store_id, remove_qty):
-    product = str(product).strip()
-    try:
-        cell = sheet.find(product)
-        if not cell:
-            return "❌ Product not found."
-        row = cell.row
-        current_qty = int(sheet.cell(row, 3).value)
-        new_qty = current_qty - remove_qty
+# Remove stock
+def remove_stock(product, store_id, qty):
+    records = sheet.get_all_records()
+    for idx, row in enumerate(records):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+            row_num = idx + 2
+            current_qty = int(row['Quantity'])
+            new_qty = current_qty - int(qty)
+            if new_qty <= 0:
+                sheet.delete_row(row_num)
+                return f"🗑 Removed all {product} from Store {store_id}."
+            else:
+                sheet.update_cell(row_num, 3, new_qty)
+                return f"➖ Removed {qty} {product}(s). Remaining: {new_qty}."
+    return f"❌ {product} not found in Store {store_id}."
 
-        if new_qty > 0:
-            sheet.update_cell(row, 3, new_qty)
-            return f"✅ Removed {remove_qty} {product}(s) from Store {store_id}. New total: {new_qty}."
-        else:
-            sheet.delete_rows(row)
-            return f"🗑️ {product} stock is now 0 and removed from Store {store_id}."
-    except:
-        return "❌ Error while removing stock."
-
-# ✅ Return full inventory summary
+# Get full stock
 def get_full_stock(store_id):
     records = sheet.get_all_records()
-    summary = f"📦 Stock Report for Store {store_id} (Product: Quantity):\n"
+    report = ""
     for row in records:
         if str(row['Store ID']) == str(store_id):
-            summary += f"- {row['Product']}: {row['Quantity']}\n"
-    return summary if "-" in summary else "No stock found for this store."
+            report += f"{row['Product Name']}: {row['Quantity']} units (Price: {row['Price ']}, Exp: {row['Expiry Date']})\n"
+    return report.strip() if report else "No data available."
 
-# ⚠️ Utility: Delete all product rows from the sheet (leave header intact)
+# Clear all products
 def clear_all_products():
-    num_rows = len(sheet.get_all_values())
-    if num_rows > 1:
-        sheet.delete_rows(2, num_rows)
-        return f"🧹 Cleared {num_rows - 1} product rows."
-    else:
-        return "Sheet already empty."
+    sheet.resize(rows=1)
+    return "🧹 Cleared all product rows."
+
+# Get price per unit
+def get_price(product, store_id):
+    records = sheet.get_all_records()
+    for row in records:
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+            return row['Price ']
+    return "Price not found"
+
+# Calculate total price for given quantity
+def calculate_total_price(product, store_id, qty):
+    unit_price = get_price(product, store_id)
+    if unit_price == "Price not found":
+        return unit_price
+    try:
+        unit_value = float(unit_price.replace("$", "").strip())
+        return f"${round(unit_value * int(qty), 2)}"
+    except:
+        return "Error calculating price"
