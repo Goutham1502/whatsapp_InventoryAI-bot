@@ -15,11 +15,21 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("InventoryData").sheet1
 
+# Ensure all required headers are present
+REQUIRED_HEADERS = ["Product Name", "Store ID", "Quantity", "Expiry Date", "Price", "Last Updated"]
+def ensure_headers():
+    existing = sheet.row_values(1)
+    if existing != REQUIRED_HEADERS:
+        sheet.resize(1)
+        sheet.append_row(REQUIRED_HEADERS)
+
+ensure_headers()
+
 # Read stock
 def get_stock(product, store_id):
     records = sheet.get_all_records()
     for row in records:
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
             return row['Quantity']
     return "Product not found"
 
@@ -31,7 +41,7 @@ def update_stock(product, store_id, change_qty, expiry_date="", price="", last_u
     records = sheet.get_all_records()
 
     for idx, row in enumerate(records, start=2):
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == store_id:
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == store_id:
             current_qty = int(row['Quantity'])
             new_qty = current_qty + change_qty
             sheet.update_cell(idx, 3, new_qty)  # Quantity
@@ -53,7 +63,7 @@ def remove_stock(product, store_id, quantity):
     records = sheet.get_all_records()
 
     for idx, row in enumerate(records, start=2):
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == store_id:
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == store_id:
             current_qty = int(row['Quantity'])
             new_qty = current_qty - quantity
             if new_qty > 0:
@@ -72,22 +82,20 @@ def get_full_stock(store_id):
         if str(row['Store ID']) == str(store_id):
             qty = row['Quantity'] if row['Quantity'] else "NO STOCK"
             price = row['Price'] if row['Price'] else "$0"
-            report += f"{row['Product']} - {qty} units @ {price}\n"
+            report += f"{row['Product Name']} - {qty} units @ {price}\n"
     return report.strip()
 
 # Clear all products
 def clear_all_products():
-    existing = sheet.get_all_values()
-    headers = existing[0] if existing else []
     sheet.resize(1)
-    sheet.append_row(headers)
+    sheet.append_row(REQUIRED_HEADERS)
     return "🗑 All products cleared."
 
 # Get unit price
 def get_price(product, store_id):
     records = sheet.get_all_records()
     for row in records:
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
             return row['Price']
     return "Price not found"
 
@@ -95,7 +103,7 @@ def get_price(product, store_id):
 def calculate_total_price(product, store_id, quantity):
     records = sheet.get_all_records()
     for row in records:
-        if row['Product'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+        if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
             try:
                 unit_price = float(str(row['Price']).replace("$", "").strip())
                 return f"${unit_price * quantity:.2f}"
@@ -112,7 +120,7 @@ def calculate_combined_total(product_quantities, store_id):
     for product, qty in product_quantities.items():
         found = False
         for row in records:
-            if row['Product'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
+            if row['Product Name'].lower() == product.lower() and str(row['Store ID']) == str(store_id):
                 try:
                     unit_price = float(str(row['Price']).replace("$", "").strip())
                     total += unit_price * qty
