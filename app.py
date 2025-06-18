@@ -1,8 +1,9 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 from sheet_handler import (
-    get_stock, update_stock, remove_stock, get_full_stock,
-    clear_all_products, get_price, calculate_total_price, calculate_combined_total
+    get_stock, update_stock, remove_stock,
+    get_full_stock, clear_all_products,
+    get_price, calculate_total_price, calculate_combined_total
 )
 import openai
 import os
@@ -11,31 +12,27 @@ from datetime import datetime
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# 🧠 NLP-based parsing
 def parse_user_input(user_input):
     prompt = f"""
-You are an AI that extracts inventory actions from WhatsApp messages.
+You are an AI that extracts inventory instructions from WhatsApp messages.
 
-Your task is to extract instructions as a valid Python list of dictionaries. Each dictionary should have:
-- intent: one of ["add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price", "calculate_combined_total"]
-- product: string (optional for get_full_stock or clear_all)
-- quantity: integer (default 0 if not mentioned)
-- store_id: integer (default 1 if not mentioned)
+Return ONLY a valid Python list of dictionaries. Each dictionary must include:
+- intent: "add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price", "calculate_combined_total"
+- product: string (optional for clear_all, get_full_stock)
+- quantity: integer (optional or 0 if not mentioned)
+- store_id: integer (default to 1 if not mentioned)
 - expiry_date: string (optional)
 - price: string (optional)
-- last_updated: string (default to today)
-
-If user asks for combined total like “2 milk and 3 bread”, return a dictionary with:
-- intent: "calculate_combined_total"
-- store_id: 1
-- product_quantities: dictionary of product: quantity
+- last_updated: today's date if not mentioned
+- product_quantities: dictionary for combined totals (optional)
 
 Message: "{user_input}"
 
-Example output:
+Example:
 [
-  {{"intent": "add_stock", "product": "milk", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-01", "price": "$3.50", "last_updated": "2025-06-17"}},
-  {{"intent": "calculate_total_price", "product": "milk", "quantity": 3, "store_id": 1}},
-  {{"intent": "calculate_combined_total", "product_quantities": {{"milk": 2, "bread": 3}}, "store_id": 1}}
+  {"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"},
+  {"intent": "calculate_combined_total", "product_quantities": {"milk": 2, "bread": 3}, "store_id": 1}
 ]
 """
     try:
@@ -46,7 +43,7 @@ Example output:
         )
         return eval(response.choices[0].message.content.strip())
     except Exception as e:
-        print("[GPT Error]", e)
+        print("[GPT Parse Error]", e)
         return None
 
 @app.route("/whatsapp", methods=["POST"])
@@ -69,6 +66,7 @@ def whatsapp_reply():
         expiry_date = parsed.get("expiry_date", "")
         price = parsed.get("price", "")
         last_updated = parsed.get("last_updated", datetime.now().strftime("%Y-%m-%d"))
+        product_quantities = parsed.get("product_quantities", {})
 
         try:
             if intent == "check_stock":
@@ -93,22 +91,20 @@ def whatsapp_reply():
 
             elif intent == "get_price":
                 unit_price = get_price(product, store_id)
-                responses.append(f"🏷 Price of {product} in Store {store_id} is {unit_price}.")
+                responses.append(f"🏷 Unit price of {product} in Store {store_id} is {unit_price}.")
 
             elif intent == "calculate_total_price":
                 total = calculate_total_price(product, store_id, quantity)
-                responses.append(f"💰 Total price for {quantity} {product}(s) in Store {store_id}: {total}")
+                responses.append(f"💰 Total price for {quantity} {product}(s): {total}.")
 
             elif intent == "calculate_combined_total":
-                product_quantities = parsed.get("product_quantities", {})
-                total_msg = calculate_combined_total(product_quantities, store_id)
-                responses.append(total_msg)
+                total = calculate_combined_total(product_quantities, store_id)
+                responses.append(total)
 
             else:
-                responses.append(f"❌ Unknown action for {product}.")
-
+                responses.append(f"❌ Unrecognized intent: {intent}")
         except Exception as e:
-            responses.append(f"❌ Error handling {product or 'request'}: {str(e)}")
+            responses.append(f"❌ Error handling {product or 'item'}: {str(e)}")
 
     msg.body("\n".join(responses))
     return str(resp)
