@@ -27,13 +27,28 @@ Return ONLY a valid Python list of dictionaries. Each dictionary should contain:
 Example input: "Clear all inventory"
 Example output: [{{"intent": "clear_all"}}]
 
+Example input: "Add 15 milk (expires July 30, price $2.50), 10 bread (expires July 25, price $1.50), 5 yogurt (exp Aug 5, $3), and 8 eggs (Aug 2, $4.20) to store 1. Also add 20 bananas ($1), 12 apples ($1.80), and 6 orange juice (exp Aug 10, $3.60) to store 2. Add 10 chips, 5 cookies ($2.25), and 7 butter packs ($3.10) to store 1."
+Example output:
+[
+  {{"intent": "add_stock", "product": "milk", "quantity": 15, "store_id": 1, "expiry_date": "2025-07-30", "price": "$2.50"}},
+  {{"intent": "add_stock", "product": "bread", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-25", "price": "$1.50"}},
+  {{"intent": "add_stock", "product": "yogurt", "quantity": 5, "store_id": 1, "expiry_date": "2025-08-05", "price": "$3"}},
+  {{"intent": "add_stock", "product": "eggs", "quantity": 8, "store_id": 1, "expiry_date": "2025-08-02", "price": "$4.20"}},
+  {{"intent": "add_stock", "product": "bananas", "quantity": 20, "store_id": 2, "price": "$1"}},
+  {{"intent": "add_stock", "product": "apples", "quantity": 12, "store_id": 2, "price": "$1.80"}},
+  {{"intent": "add_stock", "product": "orange juice", "quantity": 6, "store_id": 2, "expiry_date": "2025-08-10", "price": "$3.60"}},
+  {{"intent": "add_stock", "product": "chips", "quantity": 10, "store_id": 1}},
+  {{"intent": "add_stock", "product": "cookies", "quantity": 5, "store_id": 1, "price": "$2.25"}},
+  {{"intent": "add_stock", "product": "butter packs", "quantity": 7, "store_id": 1, "price": "$3.10"}}
+]
+
 Message: "{user_input}"
 """
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=300
+            max_tokens=600
         )
         return eval(response.choices[0].message.content.strip())
     except Exception as e:
