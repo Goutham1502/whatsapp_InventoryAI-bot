@@ -1,6 +1,6 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from sheet_handler import get_stock, update_stock, remove_stock, get_full_stock, clear_all_products
+from sheet_handler import get_stock, update_stock, remove_stock, get_full_stock, clear_all_products, get_price, calculate_total_price
 import openai
 import os
 from datetime import datetime
@@ -16,7 +16,7 @@ def parse_user_input(user_input):
 You are an AI that extracts multiple inventory instructions from WhatsApp messages.
 
 Return ONLY a valid Python list of dictionaries. Each dictionary should contain:
-- intent: "add_stock", "remove_stock", "check_stock", "get_full_stock", or "clear_all"
+- intent: one of ["add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price"]
 - product: string (optional for get_full_stock or clear_all)
 - quantity: integer (0 if not mentioned)
 - store_id: integer (default to 1 if not mentioned)
@@ -28,8 +28,8 @@ Message: "{user_input}"
 
 Example output:
 [
-  {{"intent": "add_stock", "product": "milk", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-20", "price": "$3.50", "last_updated": "2025-06-17"}},
-  {{"intent": "get_full_stock", "store_id": 1}}
+  {"intent": "add_stock", "product": "milk", "quantity": 10, "store_id": 1, "expiry_date": "2025-07-20", "price": "$3.50", "last_updated": "2025-06-17"},
+  {"intent": "calculate_total_price", "product": "milk", "quantity": 3, "store_id": 1}
 ]
 """
     try:
@@ -84,6 +84,14 @@ def whatsapp_reply():
             elif intent == "clear_all":
                 cleared = clear_all_products()
                 responses.append(cleared)
+
+            elif intent == "get_price":
+                unit_price = get_price(product, store_id)
+                responses.append(f"🏷 Price of {product} in Store {store_id} is {unit_price}.")
+
+            elif intent == "calculate_total_price":
+                total = calculate_total_price(product, store_id, quantity)
+                responses.append(f"💰 Total price for {quantity} {product}(s) in Store {store_id} is {total}.")
 
             else:
                 responses.append(f"❌ Unrecognized intent for {product}.")
