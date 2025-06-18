@@ -14,7 +14,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # 🧠 NLP-based parsing
 def parse_user_input(user_input):
-    message_input = repr(user_input)  # Safely escape string
+    message_input = repr(user_input)
     prompt = (
         "You are an AI that extracts inventory instructions from WhatsApp messages.\n\n"
         "Return ONLY a valid Python list of dictionaries. Each dictionary must include:\n"
