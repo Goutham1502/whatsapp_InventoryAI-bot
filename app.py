@@ -27,7 +27,8 @@ Return ONLY a valid Python list of dictionaries. Each dictionary must include:
 - last_updated: today's date if not mentioned
 - product_quantities: dictionary for combined totals (optional)
 
-Message: "{user_input}"
+Message: Message: {repr(user_input)}
+
 
 Example:
 [
