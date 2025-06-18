@@ -13,28 +13,26 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # 🧠 NLP-based parsing
-message_input = repr(user_input)
-prompt = f"""
-You are an AI that extracts inventory instructions from WhatsApp messages.
-
-Return ONLY a valid Python list of dictionaries. Each dictionary must include:
-- intent: "add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price", "calculate_combined_total"
-- product: string (optional for clear_all, get_full_stock)
-- quantity: integer (optional or 0 if not mentioned)
-- store_id: integer (default to 1 if not mentioned)
-- expiry_date: string (optional)
-- price: string (optional)
-- last_updated: today's date if not mentioned
-- product_quantities: dictionary for combined totals (optional)
-
-Message: {message_input}
-
-Example:
-[
-  {{"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"}},
-  {{"intent": "calculate_combined_total", "product_quantities": {{"milk": 2, "bread": 3}}, "store_id": 1}}
-]
-"""
+def parse_user_input(user_input):
+    message_input = repr(user_input)  # Safely escape string
+    prompt = (
+        "You are an AI that extracts inventory instructions from WhatsApp messages.\n\n"
+        "Return ONLY a valid Python list of dictionaries. Each dictionary must include:\n"
+        "- intent: \"add_stock\", \"remove_stock\", \"check_stock\", \"get_full_stock\", \"clear_all\", \"get_price\", \"calculate_total_price\", \"calculate_combined_total\"\n"
+        "- product: string (optional for clear_all, get_full_stock)\n"
+        "- quantity: integer (optional or 0 if not mentioned)\n"
+        "- store_id: integer (default to 1 if not mentioned)\n"
+        "- expiry_date: string (optional)\n"
+        "- price: string (optional)\n"
+        "- last_updated: today's date if not mentioned\n"
+        "- product_quantities: dictionary for combined totals (optional)\n\n"
+        f"Message: {message_input}\n\n"
+        "Example:\n"
+        "[\n"
+        "  {\"intent\": \"add_stock\", \"product\": \"milk\", \"quantity\": 5, \"store_id\": 1, \"expiry_date\": \"2025-07-15\", \"price\": \"$2.50\", \"last_updated\": \"2025-06-17\"},\n"
+        "  {\"intent\": \"calculate_combined_total\", \"product_quantities\": {\"milk\": 2, \"bread\": 3}, \"store_id\": 1}\n"
+        "]"
+    )
 
     try:
         response = openai.ChatCompletion.create(
@@ -46,6 +44,7 @@ Example:
     except Exception as e:
         print("[GPT Parse Error]", e)
         return None
+
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
