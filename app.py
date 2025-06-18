@@ -18,7 +18,7 @@ def parse_user_input(user_input):
 You are an AI that extracts inventory instructions from WhatsApp messages.
 
 Return ONLY a valid Python list of dictionaries. Each dictionary must include:
-- intent: one of ["add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price", "calculate_combined_total"]
+- intent: "add_stock", "remove_stock", "check_stock", "get_full_stock", "clear_all", "get_price", "calculate_total_price", "calculate_combined_total"
 - product: string (optional for clear_all, get_full_stock)
 - quantity: integer (optional or 0 if not mentioned)
 - store_id: integer (default to 1 if not mentioned)
@@ -31,8 +31,8 @@ Message: "{user_input}"
 
 Example:
 [
-  {{"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"}},
-  {{"intent": "calculate_combined_total", "product_quantities": {{"milk": 2, "bread": 3}}, "store_id": 1}}
+  {"intent": "add_stock", "product": "milk", "quantity": 5, "store_id": 1, "expiry_date": "2025-07-15", "price": "$2.50", "last_updated": "2025-06-17"},
+  {"intent": "calculate_combined_total", "product_quantities": {"milk": 2, "bread": 3}, "store_id": 1}
 ]
 """
     try:
